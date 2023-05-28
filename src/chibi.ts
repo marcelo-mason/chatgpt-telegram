@@ -6,17 +6,7 @@ import { callbackQuery } from 'telegraf/filters'
 import { InputMediaPhoto, Message, PhotoSize } from 'telegraf/typings/core/types/typegram'
 import { Key, Keyboard } from 'telegram-keyboard'
 
-import {
-  ButtonAction,
-  defaultSession,
-  GPTModel,
-  GPTTemp,
-  ParsedMessage,
-  storeDir,
-  URLButton,
-  UserSession,
-} from './common'
-import { GPTChat } from './gpt'
+import { GPTChat, GPTModel, GPTTemp } from './gpt'
 import { textToSpeech } from './lib/htApi'
 import { imagineIt, upscaleIt, variateIt } from './lib/midjourneyApi'
 import { shortenUrl } from './lib/tinyurlApi'
@@ -35,40 +25,86 @@ import {
   unpackActionData,
 } from './utils'
 import { downloadVoiceFile, pickVoice, postToWhisper } from './voice'
+import { storeDir } from './bot'
+
+export interface UserSession {
+  language: string
+  voice: string
+  model: GPTModel
+  imagines: MJMessage[]
+  auth: {
+    authenticated: boolean
+    attempts: number
+  }
+}
+
+export const defaultSession: UserSession = {
+  language: 'en-US',
+  voice: 'en-US-JaneNeural',
+  model: (process.env.DEFAULT_OPENAI_MODEL as GPTModel) || GPTModel.GPT3,
+  imagines: [],
+  auth: {
+    authenticated: false,
+    attempts: 0,
+  },
+}
+
+export enum ButtonAction {
+  V1 = 'V1',
+  V2 = 'V2',
+  V3 = 'V3',
+  V4 = 'V4',
+  U1 = '1',
+  U2 = '2',
+  U3 = '3',
+  U4 = '4',
+  Speak = 'Speak',
+}
+
+export type ActionData<T> = {
+  action: ButtonAction
+  data: T
+}
+
+export type URLButton = {
+  url: string
+  descriptor: string
+}
+
+export type ParsedMessage = {
+  message: string
+  urls: Array<URLButton>
+}
 
 export class ChibiContext extends Context {
-  public userSession!: UserSession
   private userGPT!: GPTChat
+  session!: UserSession
+
+  get userSession(): UserSession {
+    if (isEmptyObject(this.session)) {
+      this.session = Object.assign(this.session || {}, defaultSession)
+    }
+    return this.session as UserSession
+  }
 
   get id() {
     return this.from?.id!
   }
 
-  get session(): UserSession {
-    if (isEmptyObject(this.userSession)) {
-      this.userSession = defaultSession
-    }
-    return this.userSession
-  }
-
-  set session(value: UserSession) {
-    this.session = value
-  }
-
   get language(): string {
-    return this.session.language
+    return this.userSession.language
   }
 
   set language(value: string) {
-    this.session.language = value
+    this.userSession.language = value
   }
 
   get voice(): string {
-    return this.session.voice
+    return this.userSession.voice
   }
 
   set voice(value: string) {
-    this.session.voice = value
+    this.userSession.voice = value
   }
 
   async initGpt() {
@@ -83,12 +119,12 @@ export class ChibiContext extends Context {
   }
 
   get model(): GPTModel {
-    return this.session.model as GPTModel
+    return this.userSession.model as GPTModel
   }
 
   set model(value: GPTModel) {
-    const oldSetting = this.session.model
-    this.session.model = value
+    const oldSetting = this.userSession.model
+    this.userSession.model = value
     if (oldSetting !== value) {
       this.initGpt()
     }
@@ -110,20 +146,20 @@ export class ChibiContext extends Context {
   }
 
   async tryAuth(password: string) {
-    if ((this.session.auth.attempts ?? 0) >= 15) {
+    if ((this.userSession.auth.attempts ?? 0) >= 15) {
       return false
     }
     const isValidPassword = password === process.env.AUTH_PASSWORD
     if (!isValidPassword) {
-      const currentAttempts = this.session.auth.attempts || 0
-      this.session.auth.attempts = currentAttempts + 1
+      const currentAttempts = this.userSession.auth.attempts || 0
+      this.userSession.auth.attempts = currentAttempts + 1
       return false
     }
 
-    return (this.session.auth.authenticated = true)
+    return (this.userSession.auth.authenticated = true)
   }
 
-  isAuth = () => this.session.auth.authenticated
+  isAuth = () => this.userSession.auth.authenticated
 
   async processInput() {
     if (!this.message) {
@@ -347,7 +383,9 @@ export class ChibiContext extends Context {
   async upscale(action: ButtonAction, msgId: string) {
     const stopTyping = await this.startTyping()
     const num = parseInt(action.replace(/\D/g, ''))
-    const image = this.session.imagines.find((imagine: MJMessage) => imagine.id === msgId)
+    const image = this.userSession.imagines.find(
+      (imagine: MJMessage) => imagine.id === msgId,
+    )
     if (image) {
       console.log('Upscaling', num)
       const url = await upscaleIt(image, num)
@@ -364,7 +402,7 @@ export class ChibiContext extends Context {
   async variate(action: ButtonAction, msgId: string) {
     const stopTyping = await this.startTyping()
     const num = parseInt(action.replace(/\D/g, ''))
-    const oldMsg = this.session.imagines.find(
+    const oldMsg = this.userSession.imagines.find(
       (imagine: MJMessage) => imagine.id === msgId,
     )
     if (oldMsg) {
@@ -419,7 +457,7 @@ export class ChibiContext extends Context {
 
       if (images) {
         console.log('Imagined', msg.uri)
-        this.session.imagines.push(msg)
+        this.userSession.imagines.push(msg)
 
         const group = [
           {
@@ -452,7 +490,7 @@ export class ChibiContext extends Context {
   }
 
   getLastMsg() {
-    return this.session.imagines[this.session.imagines.length - 1] as MJMessage
+    return this.userSession.imagines[this.userSession.imagines.length - 1] as MJMessage
   }
 
   async startTyping() {

@@ -1,16 +1,24 @@
-import { Telegraf } from 'telegraf'
-import LocalSession from 'telegraf-session-local'
+import { existsSync, mkdirSync } from 'fs'
+import { join } from 'path'
+import { session, Telegraf } from 'telegraf'
 
-import { ChibiContext } from './chibi'
-import { defaultSession, sessionFile } from './common'
+import { SQLite } from '@telegraf/session/sqlite'
 
-const telegramToken = process.env.TELEGRAM_TOKEN!
-export const bot = new Telegraf(telegramToken, { contextType: ChibiContext })
+import { ChibiContext, UserSession } from './chibi'
 
-bot.use(
-  new LocalSession({
-    database: sessionFile,
-    state: defaultSession,
-    property: 'userSession',
-  }).middleware(),
-)
+export const storeDir = process.env.STORE_LOCATION || './store'
+export const sessionFile = join(storeDir, 'session.sqlite')
+
+if (!existsSync(storeDir)) {
+  mkdirSync(storeDir)
+}
+
+const store = SQLite<UserSession>({
+  filename: sessionFile,
+})
+
+export const bot = new Telegraf(process.env.TELEGRAM_TOKEN!, {
+  contextType: ChibiContext,
+})
+
+bot.use(session({ store }))

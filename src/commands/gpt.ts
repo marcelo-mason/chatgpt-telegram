@@ -1,5 +1,5 @@
 import { bot } from '../bot'
-import { GPTModel } from '../common'
+import { GPTModel } from '../gpt'
 
 export async function gpt() {
   bot.command('gpt', async (ctx) => {

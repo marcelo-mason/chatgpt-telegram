@@ -34,11 +34,8 @@ process.once('SIGINT', () => bot.stop('SIGINT'))
 process.once('SIGTERM', () => bot.stop('SIGTERM'))
 
 // undhandled errors
-process.on('unhandledRejection', (reason: any, p) => {
+process.on('unhandledRejection', (reason: any) => {
   console.error(reason)
-  if (reason.stack) {
-    console.error(reason.stack)
-  }
 })
 
 console.log('Ready')

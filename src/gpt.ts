@@ -9,9 +9,33 @@ import { BufferMemory, ConversationSummaryMemory } from 'langchain/memory'
 import { Tool } from 'langchain/tools'
 import { Configuration, OpenAIApi } from 'openai'
 
-import { GPTDimension, GPTModel, OpenAIParams } from './common'
 import PROMPTS from './text/prompts.json'
 import { googleTool } from './tools/google'
+
+export enum GPTModel {
+  GPT3 = 'gpt-3.5-turbo',
+  GPT4 = 'gpt-4',
+}
+
+export enum GPTDimension {
+  GPT3 = 768,
+  GPT4 = 4096,
+}
+
+export enum GPTTemp {
+  FOCUSED = 0.25,
+  BALANCED = 0.5,
+  INVENTIVE = 0.75,
+  CREATIVE = 1.0,
+}
+
+export const OpenAIParams = {
+  verbose: false,
+  temperature: GPTTemp.INVENTIVE,
+  maxConcurrency: 1,
+  maxTokens: 2048,
+  maxRetries: 2,
+}
 
 export class GPTChat {
   public tools: Tool[] = [googleTool]

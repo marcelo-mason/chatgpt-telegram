@@ -3,9 +3,15 @@ import ffmpeg from 'fluent-ffmpeg'
 import { createReadStream, createWriteStream } from 'fs'
 import { OpenAIApi } from 'openai'
 
-import { bot } from './bot'
-import { Voice, storeDir } from './common'
+import { bot, storeDir } from './bot'
 import VOICES from './lib/htVoices.json'
+
+export interface Voice {
+  value: string
+  name: string
+  languageCode: string
+  gender: string
+}
 
 const defaultCountryCodes = process.env.DEFAULT_COUNTRYCODES?.split(',') || []
 

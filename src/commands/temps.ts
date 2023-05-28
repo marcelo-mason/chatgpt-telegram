@@ -1,5 +1,5 @@
 import { bot } from '../bot'
-import { GPTTemp } from '../common'
+import { GPTTemp } from '../gpt'
 
 export async function temps() {
   bot.command('/focused', async (ctx) => (ctx.temperature = GPTTemp.FOCUSED))

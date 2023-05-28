@@ -4,8 +4,8 @@ import { Readable } from 'stream'
 
 import * as msgpack from '@msgpack/msgpack'
 
-import { ActionData, ButtonAction } from './common'
 import { detectLanguage, translateText } from './lib/translateApi'
+import { ActionData, ButtonAction } from './chibi'
 
 export function capitalizeFirstLetter(s: string): string {
   if (s.startsWith('http') || s.startsWith('https')) {
@@ -32,7 +32,8 @@ export function removeImagine(text: string): string {
 export function extractTextFromContent(content: string) {
   const match = content.match(/\*\*(.*?)\*\*/)
   let result = match ? match[1] : content
-  result = result.replace(/<.*?>/g, '')
+  result = result.replace(/<.*?>/g, '') //remove things in brackets
+  result = result.replace(/(https?:\/\/[^\s]*\/?)\s/g, '') // remove urls
   return result
 }
 

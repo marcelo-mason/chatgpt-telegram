@@ -1,5 +1,5 @@
 import { bot } from '../bot'
-import { ButtonAction } from '../common'
+import { ButtonAction } from '../chibi'
 
 export async function nums() {
   bot.command('1', async (ctx) => ctx.reImagine(ButtonAction.V1))
