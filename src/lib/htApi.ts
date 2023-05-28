@@ -1,61 +1,69 @@
-import axios from "axios";
-import { createWriteStream } from "fs";
+import { createWriteStream, promises as fsPromises } from 'fs'
 
-const htApiUserId = process.env.PLAY_HT_USER_ID;
-const htApiSecretKey = process.env.PLAY_HT_SECRET_KEY;
+import axios from 'axios'
+import path from 'path'
 
-export async function textToSpeech(text: string) {
+const htApiUserId = process.env.PLAY_HT_USER_ID
+const htApiSecretKey = process.env.PLAY_HT_SECRET_KEY
+
+export async function textToSpeech(text: string, voice: string, destDir: string) {
   if (!htApiUserId || !htApiSecretKey) {
-    throw new Error("Play.ht API credentials not set.");
+    throw new Error('Play.ht API credentials not set.')
   }
 
-  const endpoint = "https://play.ht/api/v1/convert";
   const headers = {
     Authorization: htApiSecretKey,
-    "X-User-ID": htApiUserId,
-    "Content-Type": "application/json",
-  };
+    'X-User-ID': htApiUserId,
+    'Content-Type': 'application/json',
+  }
+
+  const convert = 'https://play.ht/api/v1/convert'
   const data = {
-    voice: "en-US-MichelleNeural",
+    voice,
     ssml: [`<speak><p>${text}</p></speak>`],
     title: text.substring(0, 36),
-  };
+  }
 
-  const response = await axios.post(endpoint, data, { headers });
+  const convertRes = await axios.post(convert, data, { headers })
 
-  console.log(response.data);
-
-  const transcriptionId = response.data.transcriptionId;
-  const transcriptionStatusUrl = `https://play.ht/api/v1/articleStatus?transcriptionId=${transcriptionId}`;
+  const transcriptionId = convertRes.data.transcriptionId
+  const transcriptionStatusUrl = `https://play.ht/api/v1/articleStatus?transcriptionId=${transcriptionId}`
 
   async function downloadTranscript() {
-    const status = await axios.get(transcriptionStatusUrl, { headers });
-    console.log(status.data);
+    const status = await axios.get(transcriptionStatusUrl, { headers })
     if (status.data.converted) {
-      return status.data.audioUrl;
+      return status.data.audioUrl
+    }
+    if (status.data.error) {
+      throw new Error('Transcription failure')
     }
   }
 
-  let audioUrl: string | undefined;
+  let audioUrl: string | undefined
+  console.log('Waiting for transcript...')
   while (audioUrl === undefined) {
-    console.log("Check if transcript is ready...");
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    audioUrl = await downloadTranscript();
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      audioUrl = await downloadTranscript()
+    } catch (error) {
+      return
+    }
   }
+  console.log('Received transcript')
 
-  const transcriptPath = `./tmp/ht-${transcriptionId}.mp3`;
-  const writestream = createWriteStream(transcriptPath);
+  const transcriptPath = path.join(destDir, `voice-${transcriptionId}.mp3`)
+  const writestream = createWriteStream(transcriptPath)
   const download = await axios({
-    method: "GET",
+    method: 'GET',
     url: audioUrl,
-    responseType: "stream",
-  });
+    responseType: 'stream',
+  })
 
   await new Promise(async (resolve, reject) => {
-    download.data.pipe(writestream);
-    writestream.on("finish", resolve);
-    writestream.on("error", reject);
-  });
+    download.data.pipe(writestream)
+    writestream.on('finish', resolve)
+    writestream.on('error', reject)
+  })
 
-  return transcriptPath;
+  return transcriptPath
 }

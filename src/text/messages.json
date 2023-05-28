@@ -1,0 +1,29 @@
+{
+  "welcomeMessage": "Welcome to the <b>Chibi ChatGPT</b> telegram bot!",
+  "authMessage": "This bot is private.",
+  "InvalidPass": "Invalid password. Please try again.\n\nExample: <code>/auth password123</code>",
+  "gptError": "Sorry I couldn't process that, try again or rephrase.",
+  "voiceError": "Whoops! There was an error while downloading the voice file.",
+  "imagineError": "Sorry, I couldn't imagine that.",
+  "help": [
+    "You can talk to me by sending me a voice message or text.",
+    "",
+    "Tell me to imagine something via voice or text and I will create the image using Midjourney.",
+    "",
+    "Drop a photo with a prompt as the caption and I will imagine it using Midjourney.",
+    "",
+    "You can also use the following commands:",
+    "",
+    "<code>/gpt &lt;3|4&gt;</code> - Changes the GPT model",
+    "<code>/focused</code> - Produces more focused, conservative, and consistent responses",
+    "<code>/balanced</code> - Strikes a balance between creativity and consistency",
+    "<code>/inventive</code> - Produces more creative and diverse outputs wtih some level of consistency",
+    "<code>/creative</code> - Generates the most creative, diverse, and unexpected outputs",
+    "<code>/imagine &lt;prompt&gt;</code> - Imagines an image, you can use Midjourney parameters here",
+    "<code>/1 &lt;prompt&gt;</code> - Reimagines 1 with another prompt",
+    "<code>/2 &lt;prompt&gt;</code> - Reimagines 2 with another prompt",
+    "<code>/3 &lt;prompt&gt;</code> - Reimagines 3 with another prompt",
+    "<code>/4 &lt;prompt&gt;</code> - Reimagines 4 with another prompt",
+    "<code>/voice</code> - Cycles through the available voices"
+  ]
+}

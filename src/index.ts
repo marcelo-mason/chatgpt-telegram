@@ -1,117 +1,44 @@
-import dotenv from "dotenv";
-dotenv.config();
+import dotenv from 'dotenv'
+dotenv.config()
 
-import { Telegraf } from "telegraf";
-import { downloadVoiceFile } from "./lib/downloadVoiceFile";
-import { postToWhisper } from "./lib/postToWhisper";
-import { textToSpeech } from "./lib/htApi";
-import { createReadStream, existsSync, mkdirSync } from "fs";
-import { Model as ChatModel } from "./models/chat";
-import { Model as ChatWithTools } from "./models/chatWithTools";
+import { message } from 'telegraf/filters'
 
-const workDir = "./tmp";
-const telegramToken = process.env.TELEGRAM_TOKEN!;
+import { bot } from './bot'
+import { auth } from './commands/auth'
+import { gpt } from './commands/gpt'
+import { imagine } from './commands/imagine'
+import { nums } from './commands/nums'
+import { temps } from './commands/temps'
+import { voice } from './commands/voice'
+import messages from './text/messages.json'
 
-const bot = new Telegraf(telegramToken);
-let model = new ChatWithTools();
+// commands
+auth()
+voice()
+gpt()
+imagine()
+nums()
+temps()
 
-if (!existsSync(workDir)) {
-  mkdirSync(workDir);
-}
+bot.start((ctx) => ctx.replyWithHTML(messages.welcomeMessage))
+bot.help((ctx) => ctx.localizedHelp())
+bot.on(message('text'), async (ctx) => ctx.processInput())
+bot.on(message('voice'), async (ctx) => ctx.processInput())
+bot.on(message('photo'), async (ctx) => ctx.processInput())
+bot.on(message('document'), async (ctx) => ctx.processInput())
+bot.on('callback_query', async (ctx) => ctx.processCallbacks())
+bot.launch()
 
-bot.start((ctx) => {
-  ctx.reply("Welcome to my Telegram bot!");
-});
+// graceful stop
+process.once('SIGINT', () => bot.stop('SIGINT'))
+process.once('SIGTERM', () => bot.stop('SIGTERM'))
 
-bot.help((ctx) => {
-  ctx.reply("Send me a message and I will echo it back to you.");
-});
-
-bot.on("voice", async (ctx) => {
-  const voice = ctx.message.voice;
-  await ctx.sendChatAction("typing");
-
-  let localFilePath;
-
-  try {
-    localFilePath = await downloadVoiceFile(workDir, voice.file_id, bot);
-  } catch (error) {
-    console.log(error);
-    await ctx.reply(
-      "Whoops! There was an error while downloading the voice file. Maybe ffmpeg is not installed?"
-    );
-    return;
+// undhandled errors
+process.on('unhandledRejection', (reason: any, p) => {
+  console.error(reason)
+  if (reason.stack) {
+    console.error(reason.stack)
   }
+})
 
-  const transcription = await postToWhisper(model.openai, localFilePath);
-
-  await ctx.reply(`Transcription: ${transcription}`);
-  await ctx.sendChatAction("typing");
-
-  let response;
-  try {
-    response = await model.call(transcription);
-  } catch (error) {
-    console.log(error);
-    await ctx.reply(
-      "Whoops! There was an error while talking to OpenAI. See logs for details."
-    );
-    return;
-  }
-
-  console.log(response);
-
-  await ctx.reply(response);
-
-  try {
-    const responseTranscriptionPath = await textToSpeech(response);
-    await ctx.sendChatAction("typing");
-    await ctx.replyWithVoice({
-      source: createReadStream(responseTranscriptionPath),
-      filename: localFilePath,
-    });
-  } catch (error) {
-    console.log(error);
-    await ctx.reply(
-      "Whoops! There was an error while synthesizing the response via play.ht. See logs for details."
-    );
-  }
-});
-
-bot.on("message", async (ctx) => {
-  const text = (ctx.message as any).text;
-
-  if (!text) {
-    ctx.reply("Please send a text message.");
-    return;
-  }
-
-  console.log("Input: ", text);
-
-  await ctx.sendChatAction("typing");
-  try {
-    const response = await model.call(text);
-
-    await ctx.reply(response);
-  } catch (error) {
-    console.log(error);
-
-    const message = JSON.stringify(
-      (error as any)?.response?.data?.error ?? "Unable to extract error"
-    );
-
-    console.log({ message });
-
-    await ctx.reply(
-      "Whoops! There was an error while talking to OpenAI. Error: " + message
-    );
-  }
-});
-
-bot.launch().then(() => {
-  console.log("Bot launched");
-});
-
-process.on("SIGTERM", () => {
-  bot.stop();
-});
+console.log('Ready')
