@@ -60,7 +60,7 @@ export class GPTChat {
     )
 
     const prompt = ChatConversationalAgent.createPrompt(this.tools, {
-      systemMessage: PROMPTS.system.join(' '),
+      systemMessage: PROMPTS.system.join('\n'),
     } as ChatConversationalCreatePromptArgs)
 
     const llmChain = new LLMChain({
